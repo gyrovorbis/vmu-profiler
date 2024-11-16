@@ -41,3 +41,6 @@ The VMU Profiler was created as a profiling tool for the Grand Theft Auto 3 port
 
 ## Building
 Coming Soon
+
+## Acknowledgements
+100% inspired by the badass FPS monitor in [Bloom](https://github.com/pcercuei/bloom), the incredible PS1 emulator for Sega Dreamcast by [Paul Cercuei](https://github.com/pcercuei).
