@@ -49,7 +49,7 @@ extern "C" {
 
 /** Configuration Parameters
 
-    Optional configuration parameters which an be passed to
+    Optional configuration parameters which can be passed to
     vmu_profiler_start().
 
     \note
