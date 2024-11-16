@@ -1,3 +1,8 @@
+/*  vmu_profiler.c
+
+    Copyright (C) 2024 Falco Girgis
+ */
+
 #include "vmu_profiler.h"
 
 #include <stdlib.h>
