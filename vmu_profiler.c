@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdatomic.h>
+#include <stdio.h>
 
 #include <sys/malloc.h>
 
@@ -21,7 +22,7 @@
 #define VMU_PROFILER_MAPLE_PORT_DEFAULT_	0
 
 #define VMU_PROFILER_THD_STACK_SIZE_		1024
-#define VMU_PROFILER_THD_LABEL_		        "VmuProfiler"
+#define VMU_PROFILER_THD_LABEL_                 "VmuProfiler"
 
 #define MB_(b)                                  ((b) * 1024 * 1024)
 
@@ -38,7 +39,7 @@ typedef struct vmu_profiler {
     float fps_frames[];
 } vmu_profiler_t;
 
-static vmu_profiler_t* _Atomic profiler_ = NULL;
+static vmu_profiler_t* profiler_ = NULL;
 
 static size_t ram_used_(void) {
     size_t total_ram = 0;
@@ -213,9 +214,34 @@ bool vmu_profiler_stop(void) {
 }
 
 bool vmu_profiler_running(void) {
-    return (!!profiler_ && !profiler_->done);
+    return !!profiler_;
 }
 
 bool vmu_profiler_update(size_t vert_count) {
+    if(!vmu_profiler_running())
+        return false;
+
+    if(!rwsem_write_lock(&profile_->rwsem) < 0) {
+        fprintf(stderr, "vmu_profiler_update(): Failed to write rwlock: [%s]\n",
+                strerror(errno));
+        return false;
+    }
+
+    pvr_stats_t pvr_stats;
+    pvr_get_stats(&pvr_stats);
     
+    profiler_->fps_frames[profiler_->fps_frame++] = pvr_stats.frame_rate;
+
+    if(profiler_->fps_frame >= profiler_->config.fps_avg_frames)
+        profiler_->fps_frame = 0;
+
+    profiler_->verts = vert_count;
+
+    if(!rwsem_write_unlock(&profile_->rwsem) < 0) {
+        fprintf(stderr, "vmu_profiler_update(): Failed to unlock rwlock: [%s]\n",
+                strerror(errno));
+        return false;
+    }
+
+    return true;
 }
