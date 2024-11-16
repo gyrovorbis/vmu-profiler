@@ -1,10 +1,11 @@
 # VMU Profiler
-[<img src="images/closeup.png">]
+<center><img src="images/closeup.png"></center>
+
 Real-Time Visual Memory Unit Profiler for KallistiOS-Based Sega Dreamcast
 
 ## Background
 The VMU Profiler was created as a profiling tool for the Grand Theft Auto 3 port to the Sega Dreamcast as a way to gather real-time scene and resource statistics on actual hardware, rather than relying on emulators.
-[<img src="images/gta3.png">]
+<img src="images/gta3.png">
 
 ## Statistics
     1. FPS: Frames Per Second
