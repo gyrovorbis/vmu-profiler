@@ -18,13 +18,7 @@ typedef struct vmu_profiler_config {
 bool vmu_profiler_start(const vmu_profiler_config_t *config);
 bool vmu_profiler_stop(void);
 bool vmu_profiler_update(size_t vert_count);
-
 bool vmu_profiler_running(void);
-
-float vmu_profiler_ram (void);
-float vmu_profiler_vram(void);
-float vmu_profiler_sram(void);
-size_t vmu_profiler_verts(void);
 
 #ifdef __cplusplus
 }
