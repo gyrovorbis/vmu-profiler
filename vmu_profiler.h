@@ -44,6 +44,7 @@
 extern "C" {
 #endif
 
+#include <kos.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -61,13 +62,31 @@ typedef struct vmu_profiler_config {
     prio_t       thread_priority;     /**< Priority of the profiler's background thread. */
     unsigned     polling_interval_ms; /**< How long the thread sleeps between each update. */
     unsigned     fps_avg_frames;      /**< How many frames get averaged together to smooth FPS. */
-    maple_addr_t maple_port;          /**< Maple port of the VMU to display the profiler on. */
+    unsigned maple_port;          /**< Maple port of the VMU to display the profiler on. */
 } vmu_profiler_config_t;
+#if 1
+enum measure_type {
+    use_float,
+    use_unsigned,
+    INVALID
+};
 
-bool vmu_profiler_start(const vmu_profiler_config_t* config);
-bool vmu_profiler_stop(void);
-bool vmu_profiler_update(size_t vert_count);
-bool vmu_profiler_running(void);
+typedef struct vmu_profiler_measurement {
+    // 4 chars or less
+    char *disp_name;
+    enum measure_type m;
+    //
+    float fstorage;
+    //
+    unsigned ustorage;
+    // callback to produce value and store in *storage
+    void (*generate_value)(void *s); 
+} vmu_profiler_measurement_t;
+#endif
+int vmu_profiler_start(const vmu_profiler_config_t* config);
+int vmu_profiler_stop(void);
+int vmu_profiler_update(/*size_t polys, size_t vert_count, size_t v2c*/void);
+int vmu_profiler_running(void);
 
 #ifdef __cplusplus
 }
