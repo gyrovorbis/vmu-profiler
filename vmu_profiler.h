@@ -48,6 +48,9 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+struct vmu_profiler;
+struct vmu_profiler_measurement;
+
 /** Configuration Parameters
 
     Optional configuration parameters which can be passed to
@@ -64,10 +67,11 @@ typedef struct vmu_profiler_config {
     unsigned     fps_avg_frames;      /**< How many frames get averaged together to smooth FPS. */
     unsigned maple_port;          /**< Maple port of the VMU to display the profiler on. */
 } vmu_profiler_config_t;
-#if 1
+
 enum measure_type {
     use_float,
     use_unsigned,
+    use_string,
     INVALID
 };
 
@@ -81,12 +85,27 @@ typedef struct vmu_profiler_measurement {
     unsigned ustorage;
     char sstorage[16];
     // callback to produce value and store in *storage
-    void (*generate_value)(void *s); 
+    void (*generate_value)(struct vmu_profiler_measurement *m, struct vmu_profiler *p); 
 } vmu_profiler_measurement_t;
-#endif
+
+typedef struct vmu_profiler
+{
+    vmu_profiler_config_t config;
+
+    kthread_t *thread;
+    rw_semaphore_t rwsem;
+    atomic_bool done;
+
+    int measure_count;
+    struct vmu_profiler_measurement *measures[5];
+
+    unsigned fps_frame;
+    float fps_frames[];
+} vmu_profiler_t;
+
 int vmu_profiler_start(const vmu_profiler_config_t* config);
 int vmu_profiler_stop(void);
-int vmu_profiler_update(/*size_t polys, size_t vert_count, size_t v2c*/void);
+int vmu_profiler_update(void);
 int vmu_profiler_running(void);
 
 #ifdef __cplusplus
