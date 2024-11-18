@@ -150,7 +150,6 @@ static void *vmu_profiler_run_(void *arg) {
 
     while(!self->done) {
         thd_sleep(self->config.polling_interval_ms);
-        dbgio_printf("msrct %d\n", profiler_->measure_count);
         memset(pfstr,0,1024);
         for (int i=0;i<profiler_->measure_count;i++) {
             char *nextv = to_string(profiler_->measures[i], i);
