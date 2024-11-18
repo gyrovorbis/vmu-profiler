@@ -79,6 +79,7 @@ typedef struct vmu_profiler_measurement {
     float fstorage;
     //
     unsigned ustorage;
+    char sstorage[16];
     // callback to produce value and store in *storage
     void (*generate_value)(void *s); 
 } vmu_profiler_measurement_t;

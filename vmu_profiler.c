@@ -50,19 +50,18 @@ typedef struct vmu_profiler {
     unsigned fps_frame;
 #if 1
     int measure_count;
-    vmu_profiler_measurement_t *measures[4];
+    vmu_profiler_measurement_t *measures[5];
  #endif
     float fps_frames[];
 } vmu_profiler_t;
 static vmu_profiler_t* profiler_ = NULL;
 
 void vmu_profiler_add_measure(vmu_profiler_measurement_t *measure) {
-    if (profiler_->measure_count < 4) {
+    if (profiler_->measure_count < 5) {
         dbgio_printf("adding measure: %s\n", measure->disp_name);
         profiler_->measures[profiler_->measure_count++] = measure;
     }
 }
-
 
 vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(void *mv)) {
 
@@ -75,6 +74,15 @@ vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, vo
     return measure;
 }
 
+void update_fps(void *m) {
+        float fps = 0.0f;
+        for(unsigned f = 0; f < profiler_->config.fps_avg_frames; ++f)
+            fps += profiler_->fps_frames[f];
+        fps /= (float)profiler_->config.fps_avg_frames;
+
+        ((vmu_profiler_measurement_t *)m)->fstorage = fps;
+}
+
 void update_transformed_verts(void *m) {
     ((vmu_profiler_measurement_t *)m)->ustorage = (size_t)xform_verts;
 }
@@ -84,7 +92,7 @@ void update_submitted_verts(void *m) {
 }
 
 void update_transformed_polys(void *m) {
-    ((vmu_profiler_measurement_t *)m)->ustorage = (size_t)xform_verts;
+    ((vmu_profiler_measurement_t *)m)->ustorage = (size_t)xform_polys;
 }
 
 void update_pvr_ram(void *m) {
@@ -95,69 +103,39 @@ void update_pvr_ram(void *m) {
 
 
 void setup_my_measures(void) {
+    vmu_profiler_measurement_t *fps_msr = init_measurement("FPS", use_float, update_fps);
+    vmu_profiler_measurement_t *pvr_msr = init_measurement("PVR", use_float, update_pvr_ram);
+    vmu_profiler_measurement_t *xp_msr = init_measurement("POLY", use_unsigned, update_transformed_polys);
     vmu_profiler_measurement_t *xv_msr = init_measurement("TVRT", use_unsigned, update_transformed_verts);
     vmu_profiler_measurement_t *sv_msr = init_measurement("SVRT", use_unsigned, update_submitted_verts);
-    vmu_profiler_measurement_t *xp_msr = init_measurement("POLY", use_unsigned, update_transformed_polys);
-    vmu_profiler_measurement_t *pvr_msr = init_measurement("PVR", use_float, update_pvr_ram);
 
-    vmu_profiler_add_measure(pvr_msr);
     vmu_profiler_add_measure(xp_msr);
     vmu_profiler_add_measure(xv_msr);
     vmu_profiler_add_measure(sv_msr);
+    vmu_profiler_add_measure(pvr_msr);
+    vmu_profiler_add_measure(fps_msr);
 }
 
 
-char *to_string(vmu_profiler_measurement_t *measure) {
-    char *valstring = malloc(13);
-    memset(valstring, 0, 13);
-
+char *to_string(vmu_profiler_measurement_t *measure, int i) {
     (*measure->generate_value)((void*)measure);
 
     switch (measure->m) {
         case use_float:
-            sprintf(valstring, "\n%s: %.2f", measure->disp_name, measure->fstorage);
+            if (!i)
+                sprintf(measure->sstorage, "%s: %.2f", measure->disp_name, measure->fstorage);
+            else
+                sprintf(measure->sstorage, "\n%s: %.2f", measure->disp_name, measure->fstorage);
             break;
         case use_unsigned:
         default:
-            sprintf(valstring, "\n%s: %u", measure->disp_name, measure->ustorage);
+            if (!i)
+                sprintf(measure->sstorage, "%s: %u", measure->disp_name, measure->ustorage);
+            else
+                sprintf(measure->sstorage, "\n%s: %u", measure->disp_name, measure->ustorage);
             break;
     }
-    return valstring;
-}
-
-
-#if 0
-
-
-       char fmt_string[256];
-
-        strcat(fmt_string, "FPS: %u\n");
-
-        switch (profiler_->measure_count) {
-            case 0:
-            vmu_printf(fmt_string, (unsigned)(fps / self->config.fps_avg_frames));
-            break;
-            case 1:
-            strcat(fmt_string, profiler_->measures[0]->fmt_string);
-            vmu_printf("FPS : %u\n", (unsigned)(fps / self->config.fps_avg_frames));
-            break;
-        }
-
-        profiler->measure_count = 0;
-
-#endif
-
-
-
-// actually this is free now
-static size_t ram_free_(void) {
-    size_t total_ram = 0;
-
-    // Heap
-    total_ram += mallinfo().arena - mallinfo().fordblks;
-    // Main Stack
-
-    return total_ram;
+    return measure->sstorage;
 }
 
 extern int xform_verts;
@@ -172,25 +150,12 @@ static void *vmu_profiler_run_(void *arg) {
 
     while(!self->done) {
         thd_sleep(self->config.polling_interval_ms);
-
-   //     /*struct mallinfo*/size_t   ram_stats  = ram_free_();
- //       size_t          vram_stats = pvr_mem_available();
-
-        float fps = 0.0f;
-        for(unsigned f = 0; f < self->config.fps_avg_frames; ++f)
-            fps += self->fps_frames[f];
-
-        sprintf(pfstr, "FPS: %2.f", (float)(fps / self->config.fps_avg_frames));
+        dbgio_printf("msrct %d\n", profiler_->measure_count);
+        memset(pfstr,0,1024);
         for (int i=0;i<profiler_->measure_count;i++) {
-            char *nextv = to_string(profiler_->measures[i]);
-            dbgio_printf(nextv);
+            char *nextv = to_string(profiler_->measures[i], i);
             strcat(pfstr, nextv);
-            free(nextv);
         }
-
-//       size_t          vram_stats = pvr_mem_available();
-//        float sh4_mem = (HW_MEMSIZE - ram_stats)  / (float)HW_MEMSIZE * 100.0f;
-//        float pvr_mem = (MB_(8)     - vram_stats) / (float)MB_(8)     * 100.0f;
 
         if(rwsem_read_lock(&profiler_->rwsem) < 0) {
             dbgio_printf("vmu_profiler_run(): RWSEM lock failed: [%s]!\n",
@@ -200,12 +165,6 @@ static void *vmu_profiler_run_(void *arg) {
         }
 
         vmu_printf(pfstr);
-
-#if 0
-        //dbgio_printf
-        vmu_printf("FPS : %.2f\nPVR : %.2f\nPOLY: %u\nTVTX: %u\nSVTX: %u",
-                   (float)(fps / self->config.fps_avg_frames), (float)pvr_mem, (unsigned)self->polys, (unsigned)self->verts,(unsigned)self->verts2);
-#endif
 
         if(rwsem_read_unlock(&self->rwsem) < 0) {
             dbgio_printf("vmu_profiler_run(): RWSEM unlock failed: [%s]!\n",
