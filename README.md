@@ -1,5 +1,5 @@
 # VMU Profiler
-<center><img src="images/closeup.png"></center>
+<center><img src="images/Screenshot_20241118_195852_Discord.jpg"></center>
 
 Real-Time Visual Memory Unit Profiler for KallistiOS-Based Sega Dreamcast Applications
 
