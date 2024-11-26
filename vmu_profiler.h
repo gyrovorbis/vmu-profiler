@@ -48,6 +48,8 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+#define VMU_PROFILER_MAX_MEASURES   5
+
 struct vmu_profiler;
 struct vmu_profiler_measurement;
 
@@ -80,9 +82,10 @@ typedef struct vmu_profiler_measurement {
     char *disp_name;
     enum measure_type m;
     //
-    float fstorage;
-    //
-    unsigned ustorage;
+    union {
+        float fstorage;
+        unsigned ustorage;
+    };
     char sstorage[16];
     // callback to produce value and store in *storage
     void (*generate_value)(struct vmu_profiler_measurement *m, struct vmu_profiler *p); 
@@ -97,16 +100,19 @@ typedef struct vmu_profiler
     atomic_bool done;
 
     int measure_count;
-    struct vmu_profiler_measurement *measures[5];
+    struct vmu_profiler_measurement *measures[VMU_PROFILER_MAX_MEASURES];
 
     unsigned fps_frame;
     float fps_frames[];
 } vmu_profiler_t;
 
-int vmu_profiler_start(const vmu_profiler_config_t* config);
+int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(struct vmu_profiler *p));
 int vmu_profiler_stop(void);
 int vmu_profiler_update(void);
 int vmu_profiler_running(void);
+
+vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m, vmu_profiler_t *p));
+void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *measure);
 
 #ifdef __cplusplus
 }
