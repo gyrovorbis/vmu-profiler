@@ -44,8 +44,14 @@
 extern "C" {
 #endif
 
+#include <kos.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#define VMU_PROFILER_MAX_MEASURES   5
+
+struct vmu_profiler;
+struct vmu_profiler_measurement;
 
 /** Configuration Parameters
 
@@ -61,13 +67,52 @@ typedef struct vmu_profiler_config {
     prio_t       thread_priority;     /**< Priority of the profiler's background thread. */
     unsigned     polling_interval_ms; /**< How long the thread sleeps between each update. */
     unsigned     fps_avg_frames;      /**< How many frames get averaged together to smooth FPS. */
-    maple_addr_t maple_port;          /**< Maple port of the VMU to display the profiler on. */
+    unsigned maple_port;          /**< Maple port of the VMU to display the profiler on. */
 } vmu_profiler_config_t;
 
-bool vmu_profiler_start(const vmu_profiler_config_t* config);
-bool vmu_profiler_stop(void);
-bool vmu_profiler_update(size_t vert_count);
-bool vmu_profiler_running(void);
+enum measure_type {
+    use_float,
+    use_unsigned,
+    use_string,
+    INVALID
+};
+
+typedef struct vmu_profiler_measurement {
+    // 4 chars or less
+    char *disp_name;
+    enum measure_type m;
+    //
+    union {
+        float fstorage;
+        unsigned ustorage;
+    };
+    char sstorage[16];
+    // callback to produce value and store in *storage
+    void (*generate_value)(struct vmu_profiler_measurement *m);
+} vmu_profiler_measurement_t;
+
+typedef struct vmu_profiler
+{
+    vmu_profiler_config_t config;
+
+    kthread_t *thread;
+    rw_semaphore_t rwsem;
+    atomic_bool done;
+
+    int measure_count;
+    struct vmu_profiler_measurement *measures[VMU_PROFILER_MAX_MEASURES];
+
+    unsigned fps_frame;
+    float fps_frames[];
+} vmu_profiler_t;
+
+int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(struct vmu_profiler *p));
+int vmu_profiler_stop(void);
+int vmu_profiler_update(void);
+int vmu_profiler_running(void);
+
+vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m));
+void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *measure);
 
 #ifdef __cplusplus
 }
