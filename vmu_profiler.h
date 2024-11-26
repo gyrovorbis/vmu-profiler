@@ -88,7 +88,7 @@ typedef struct vmu_profiler_measurement {
     };
     char sstorage[16];
     // callback to produce value and store in *storage
-    void (*generate_value)(struct vmu_profiler_measurement *m, struct vmu_profiler *p); 
+    void (*generate_value)(struct vmu_profiler_measurement *m);
 } vmu_profiler_measurement_t;
 
 typedef struct vmu_profiler
@@ -111,7 +111,7 @@ int vmu_profiler_stop(void);
 int vmu_profiler_update(void);
 int vmu_profiler_running(void);
 
-vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m, vmu_profiler_t *p));
+vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m));
 void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *measure);
 
 #ifdef __cplusplus

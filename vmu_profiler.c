@@ -1,6 +1,6 @@
 /*  vmu_profiler.c
 
-	Copyright (C) 2024 Falco Girgis
+	Copyright (C) 2024 Falco Girgis, Jason Martin
  */
 
 #include <stdlib.h>
@@ -14,6 +14,7 @@
 
 #include <arch/arch.h>
 
+#include <dc/sound/sound.h>
 #include <dc/maple.h>
 #include <dc/pvr.h>
 #include <dc/vmu_fb.h>
@@ -38,22 +39,22 @@ static vmu_profiler_t *profiler_ = NULL;
 
 
 // sample measure for FPS, depends on internal implementaiton details
-void update_fps(vmu_profiler_measurement_t *m, vmu_profiler_t *p)
+void update_fps(vmu_profiler_measurement_t *m)
 {
 	float fps = 0.0f;
 
-	for (unsigned f = 0; f < p->config.fps_avg_frames; ++f) {
-		fps += p->fps_frames[f];
+	for (unsigned f = 0; f < profiler_->config.fps_avg_frames; ++f) {
+		fps += profiler_->fps_frames[f];
 	}
 
-	fps /= (float)p->config.fps_avg_frames;
+	fps /= (float)profiler_->config.fps_avg_frames;
 
 	m->fstorage = fps;
 }
 
 
 // sample measure for PVR memory usage
-void update_pvr_ram(vmu_profiler_measurement_t *m, vmu_profiler_t *p)
+void update_pvr_ram(vmu_profiler_measurement_t *m)
 {
 	size_t vram_stats = pvr_mem_available();
 
@@ -71,7 +72,7 @@ void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *
 }
 
 
-vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m, vmu_profiler_t *p))
+vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m))
 {
 	vmu_profiler_measurement_t *measure = (vmu_profiler_measurement_t *)malloc(sizeof(vmu_profiler_measurement_t));
 
@@ -313,7 +314,7 @@ int vmu_profiler_update(void)
 
 	for (int i = 0; i < profiler_->measure_count; i++) {
 		vmu_profiler_measurement_t *measure = profiler_->measures[i];
-		(*measure->generate_value)((void *)measure, profiler_);
+		(*measure->generate_value)(measure);
 	}
 
 	if (rwsem_write_unlock(&profiler_->rwsem) < 0) {
