@@ -14,7 +14,6 @@
 
 #include <arch/arch.h>
 
-#include <dc/sound/sound.h>
 #include <dc/maple.h>
 #include <dc/pvr.h>
 #include <dc/vmu_fb.h>
