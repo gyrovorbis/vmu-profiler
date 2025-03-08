@@ -16,7 +16,11 @@
             // initialize video
             // initialize audio
 
-            vmu_profiler_start(<optional configuration>);
+            vmu_profiler *profiler = vmu_profiler_start(<optional configuration>);
+            if (profiler) {
+                // Add some measurements
+                vmu_profiler_add_measure(profiler, init_measurement("FPS", use_float, update_fps, NULL));
+            }
 
             // Start the game loop
             while(!done) {
@@ -47,6 +51,13 @@ extern "C" {
 #include <kos.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#ifdef __cplusplus
+#include <atomic>
+using atomic_bool = std::atomic<bool>;
+#else
+#include <stdatomic.h>
+#endif
 
 #define VMU_PROFILER_MAX_MEASURES   5
 
@@ -79,8 +90,9 @@ enum measure_type {
 
 typedef struct vmu_profiler_measurement {
     // 4 chars or less
-    char *disp_name;
+    const char *disp_name;
     enum measure_type m;
+    void *user_data;
     //
     union {
         float fstorage;
@@ -101,17 +113,14 @@ typedef struct vmu_profiler
 
     int measure_count;
     struct vmu_profiler_measurement *measures[VMU_PROFILER_MAX_MEASURES];
-
-    unsigned fps_frame;
-    float fps_frames[];
 } vmu_profiler_t;
 
-int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(struct vmu_profiler *p));
+vmu_profiler_t *vmu_profiler_start(const vmu_profiler_config_t *config);
 int vmu_profiler_stop(void);
 int vmu_profiler_update(void);
 int vmu_profiler_running(void);
 
-vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m));
+vmu_profiler_measurement_t *init_measurement(const char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m), void *user_data);
 void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *measure);
 
 #ifdef __cplusplus
