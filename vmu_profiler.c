@@ -37,6 +37,7 @@ static char pfstr[1024];
 static vmu_profiler_t *profiler_ = NULL;
 
 
+/*
 // sample measure for FPS, depends on internal implementaiton details
 void update_fps(vmu_profiler_measurement_t *m)
 {
@@ -61,7 +62,7 @@ void update_pvr_ram(vmu_profiler_measurement_t *m)
 
 	m->fstorage = pvr_mem;
 }
-
+*/
 
 void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *measure)
 {
