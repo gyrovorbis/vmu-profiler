@@ -37,6 +37,7 @@ static char pfstr[1024];
 static vmu_profiler_t *profiler_ = NULL;
 
 
+/*
 // sample measure for FPS, depends on internal implementaiton details
 void update_fps(vmu_profiler_measurement_t *m)
 {
@@ -61,7 +62,7 @@ void update_pvr_ram(vmu_profiler_measurement_t *m)
 
 	m->fstorage = pvr_mem;
 }
-
+*/
 
 void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *measure)
 {
@@ -71,12 +72,15 @@ void vmu_profiler_add_measure(vmu_profiler_t *prof, vmu_profiler_measurement_t *
 }
 
 
-vmu_profiler_measurement_t *init_measurement(char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m))
+vmu_profiler_measurement_t *init_measurement(const char *name, enum measure_type m, void (*callback)(vmu_profiler_measurement_t *m), void *user_data)
 {
 	vmu_profiler_measurement_t *measure = (vmu_profiler_measurement_t *)malloc(sizeof(vmu_profiler_measurement_t));
 
 	measure->disp_name = name;
 	measure->m = m;
+	measure->user_data = user_data;
+	measure->ustorage = 0;
+	measure->sstorage[0] = 0;
 	measure->generate_value = callback;
 
 	return measure;
@@ -152,8 +156,7 @@ static void *vmu_profiler_run_(void *arg)
 	return (void *)success;
 }
 
-
-int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(struct vmu_profiler *p))
+vmu_profiler_t *vmu_profiler_start(const vmu_profiler_config_t *config)
 {
 	static const vmu_profiler_config_t default_config = {
 		.thread_priority = VMU_PROFILER_THREAD_PRIO_DEFAULT_,
@@ -161,12 +164,10 @@ int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(s
 		.fps_avg_frames = VMU_PROFILER_FPS_AVG_FRAMES_DEFAULT_,
 		.maple_port = VMU_PROFILER_MAPLE_PORT_DEFAULT_};
 
-	int success = true;
 	vmu_profiler_t *profiler = NULL;
 
 	if (vmu_profiler_running()) {
 		fprintf(stderr, "vmu_profiler_start(): Profiler already running!\n");
-		success = false;
 		goto done;
 	} else {
 		fprintf(stderr, "vmu_profiler_start(): Launching profiler thread.\n");
@@ -178,7 +179,6 @@ int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(s
 	profiler = malloc(sizeof(vmu_profiler_t) + sizeof(float) * fps_frames);
 	if (!profiler) {
 		fprintf(stderr, "\tVMU Profiler failed to allocate!\n");
-		success = false;
 		goto done;
 	}
 
@@ -202,7 +202,6 @@ int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(s
 
 	if (rwsem_init(&profiler->rwsem) < 0) {
 		fprintf(stderr, "\tCould not initialize RW semaphore!");
-		success = false;
 		goto dealloc;
 	}
 
@@ -213,15 +212,12 @@ int vmu_profiler_start(const vmu_profiler_config_t *config, void (*setup_func)(s
 		.label = VMU_PROFILER_THD_LABEL_,
 	};
 
-	(*setup_func)(profiler);
-
 	profiler->done = 0;
 
 	profiler->thread = thd_create_ex(&attr, vmu_profiler_run_, profiler);
 
 	if (!profiler->thread) {
 		fprintf(stderr, "\tFailed to spawn profiler thread!\n");
-		success = false;
 		goto deinit_sem;
 	}
 
@@ -237,9 +233,8 @@ dealloc:
 	profiler = NULL;
 
 done:
-	return success;
+	return profiler_;
 }
-
 
 int vmu_profiler_stop(void)
 {
@@ -303,17 +298,11 @@ int vmu_profiler_update(void)
 		return false;
 	}
 
-	pvr_stats_t pvr_stats;
-	pvr_get_stats(&pvr_stats);
-
-	profiler_->fps_frames[profiler_->fps_frame++] = pvr_stats.frame_rate;
-
-	if (profiler_->fps_frame >= profiler_->config.fps_avg_frames)
-		profiler_->fps_frame = 0;
-
 	for (int i = 0; i < profiler_->measure_count; i++) {
 		vmu_profiler_measurement_t *measure = profiler_->measures[i];
-		(*measure->generate_value)(measure);
+		if (measure->generate_value) {
+			measure->generate_value(measure);
+		}
 	}
 
 	if (rwsem_write_unlock(&profiler_->rwsem) < 0) {

@@ -23,24 +23,21 @@ The VMU Profiler was created as a profiling tool for the Grand Theft Auto 3 port
     - User-defined/configurable statistics
 
 ## Usage
-	extern int xform_verts;
 	void update_transformed_verts(vmu_profiler_measurement_t *m)
 	{
-		m->ustorage = (size_t)xform_verts;
+		Engine *engine = (Engine *)m->user_data;
+		m->ustorage = engine->transformed_verts;
 	}
-
-
-	void setup_measures(struct vmu_profiler *p) {
-		vmu_profiler_measurement_t *xv_msr = init_measurement("TVRT", use_unsigned, update_transformed_verts);
-		vmu_profiler_add_measure(p, xv_msr);
-	}
-
 
 	int main(int argc, char* argv[]) {
 		// initialize video
 		// initialize audio
 
-		vmu_profiler_start(<optional configuration>, setup_measures);
+		vmu_profiler *profiler = vmu_profiler_start(<optional configuration>);
+		if (profiler) {
+			vmu_profiler_measurement_t *xv_msr = init_measurement("TVRT", use_unsigned, update_transformed_verts, engine);
+			vmu_profiler_add_measure(p, xv_msr);
+		}
 
 		// Start the game loop
 		while(!done) {
